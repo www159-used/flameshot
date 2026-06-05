@@ -27,6 +27,7 @@
 #include "widgets/orientablepushbutton.h"
 #include "widgets/panel/sidepanelwidget.h"
 #include "widgets/panel/utilitypanel.h"
+#include "qhotkey.h"
 
 #include <QApplication>
 #include <QCheckBox>
@@ -98,6 +99,13 @@ CaptureWidget::CaptureWidget(const CaptureRequest& req,
     m_xywhTimer.setSingleShot(true);
     setAttribute(Qt::WA_DeleteOnClose);
     setAttribute(Qt::WA_QuitOnClose, false);
+#if defined(Q_OS_MACOS)
+    auto* escapeHotkey = new QHotkey(QKeySequence(Qt::Key_Escape), true, this);
+    connect(escapeHotkey,
+            &QHotkey::activated,
+            this,
+            &CaptureWidget::deleteToolWidgetOrClose);
+#endif
     m_opacity = m_config.contrastOpacity();
     m_uiColor = m_config.uiColor();
     m_contrastUiColor = m_config.contrastUiColor();
@@ -1099,6 +1107,12 @@ void CaptureWidget::setToolSize(int size)
 
 void CaptureWidget::keyPressEvent(QKeyEvent* e)
 {
+#if defined(Q_OS_MACOS)
+    if (e->key() == Qt::Key_Escape && e->modifiers() == Qt::NoModifier) {
+        deleteToolWidgetOrClose();
+        return;
+    }
+#endif
     // If the key is a digit, change the tool size
     bool ok;
     int digit = e->text().toInt(&ok);
@@ -1193,6 +1207,7 @@ void CaptureWidget::changeEvent(QEvent* e)
         // used for the update rect
         update(QRect(bottomRight - QPoint(1000, 200), bottomRight));
     }
+    QWidget::changeEvent(e);
 }
 
 void CaptureWidget::initContext(bool fullscreen, const CaptureRequest& req)
